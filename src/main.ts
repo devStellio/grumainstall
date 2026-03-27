@@ -227,10 +227,15 @@ async function removeDeviceOwner() {
   if (!confirm('¿Estás seguro de quitar el modo kiosko? El dispositivo dejará de estar administrado.')) return;
   log('Quitando modo kiosko...');
   try {
-    log('Removiendo admin activo...');
-    await sh('dpm remove-active-admin ' + CONFIG.adminReceiver + ' 2>&1');
+    log('Deteniendo app...');
+    const r1 = await sh('am force-stop ' + CONFIG.packageName + ' 2>&1');
+    if (r1.trim()) log(r1.trim(), 'warning');
     log('Limpiando device owner...');
-    await sh('dpm clear-device-owner 2>&1');
+    const r2 = await sh('dpm clear-device-owner 2>&1');
+    if (r2.trim()) log(r2.trim(), r2.toLowerCase().includes('success') ? 'success' : 'warning');
+    log('Removiendo admin activo...');
+    const r3 = await sh('dpm remove-active-admin ' + CONFIG.adminReceiver + ' 2>&1');
+    if (r3.trim()) log(r3.trim(), r3.toLowerCase().includes('success') ? 'success' : 'warning');
 
     await getAppStatus();
 
