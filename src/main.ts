@@ -227,27 +227,50 @@ async function removeDeviceOwner() {
   if (!confirm('¿Estás seguro de quitar el modo kiosko? El dispositivo dejará de estar administrado.')) return;
   log('Quitando modo kiosko...');
   try {
-    log('Deteniendo app...');
+    // 1. Force stop para salir de lock task
+    log('[1/4] am force-stop ' + CONFIG.packageName);
     const r1 = await sh('am force-stop ' + CONFIG.packageName + ' 2>&1');
-    if (r1.trim()) log(r1.trim(), 'warning');
-    log('Limpiando device owner...');
-    const r2 = await sh('dpm clear-device-owner 2>&1');
-    if (r2.trim()) log(r2.trim(), r2.toLowerCase().includes('success') ? 'success' : 'warning');
-    log('Removiendo admin activo...');
-    const r3 = await sh('dpm remove-active-admin ' + CONFIG.adminReceiver + ' 2>&1');
-    if (r3.trim()) log(r3.trim(), r3.toLowerCase().includes('success') ? 'success' : 'warning');
+    log('>> ' + (r1.trim() || '(sin salida)'), r1.trim() ? 'warning' : 'info');
 
+    // 2. Listar comandos dpm disponibles
+    log('[2/4] dpm help (buscando comandos disponibles)...');
+    const help = await sh('dpm help 2>&1 || dpm 2>&1');
+    const cmds = help.split('\n').filter((l: string) => l.trim().startsWith('dpm ')).join(' | ');
+    log('>> Comandos dpm: ' + (cmds || help.substring(0, 300)));
+
+    // 3. Intentar quitar device owner con variantes
+    log('[3/4] Intentando quitar device owner...');
+
+    // Variante A: dpm remove-active-admin (sin --force-remove)
+    log('>> dpm remove-active-admin ' + CONFIG.adminReceiver);
+    const rA = await sh('dpm remove-active-admin ' + CONFIG.adminReceiver + ' 2>&1');
+    log('>> Resultado: ' + (rA.trim() || '(sin salida)'), rA.toLowerCase().includes('success') ? 'success' : 'warning');
+
+    // Variante B: dpm clear-device-owner (sin args)
+    log('>> dpm clear-device-owner');
+    const rB = await sh('dpm clear-device-owner 2>&1');
+    log('>> Resultado: ' + (rB.trim() || '(sin salida)'), rB.toLowerCase().includes('success') ? 'success' : 'warning');
+
+    // Variante C: dpm clear-device-owner con package
+    log('>> dpm clear-device-owner ' + CONFIG.packageName);
+    const rC = await sh('dpm clear-device-owner ' + CONFIG.packageName + ' 2>&1');
+    log('>> Resultado: ' + (rC.trim() || '(sin salida)'), rC.toLowerCase().includes('success') ? 'success' : 'warning');
+
+    // 4. Verificar estado final
+    log('[4/4] Verificando estado...');
     await getAppStatus();
 
     const o = await sh('dumpsys device_policy');
+    const ownerSection = o.split('\n').filter((l: string) => l.includes('Device Owner') || l.includes('device-owner') || l.includes('package=' + CONFIG.packageName)).join('\n');
+    log('>> device_policy relevante:\n' + (ownerSection || '(no encontrado)'));
     const stillOwner = o.includes('Device Owner') && o.includes('package=' + CONFIG.packageName);
 
     if (!stillOwner) {
       log('Modo kiosko quitado correctamente', 'success');
       notify('Modo kiosko quitado correctamente.', 'success');
     } else {
-      log('No se pudo quitar el modo kiosko.', 'warning');
-      notify('No se pudo quitar el modo kiosko.', 'warning');
+      log('No se pudo quitar. Revisa los logs para ver que comando funciona.', 'error');
+      notify('No se pudo quitar el modo kiosko. Revisa el log.', 'error');
     }
   } catch (e: any) {
     log('Error al procesar la solicitud', 'error');
