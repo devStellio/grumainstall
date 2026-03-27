@@ -5,8 +5,8 @@ import AdbWebCredentialStore from '@yume-chan/adb-credential-web';
 
 const CONFIG = {
   packageName: 'com.startac.timeatt',
-  adminReceiver: 'com.startac.timeatt/.receivers.AdminReceiver',
-  downloadUrl: 'https://www.googleapis.com/drive/v3/files/1DaXQtF4LpmVDYn4RePKF0tMGGGbhq1M7?alt=media&key=AIzaSyDllCtqeCr7f4Adv0D8Y-pz5RZ4sv5iPU4'
+  adminReceiver: 'com.startac.timeatt/.AdminReceiver',
+  downloadUrl: 'https://www.googleapis.com/drive/v3/files/1My1m0YN3e6r7tBWhH5COZrFyQKWofrW4?alt=media&key=AIzaSyDllCtqeCr7f4Adv0D8Y-pz5RZ4sv5iPU4'
 };
 let manager: AdbDaemonWebUsbDeviceManager | undefined;
 let device: AdbDaemonWebUsbDevice | undefined;
@@ -227,18 +227,13 @@ async function removeDeviceOwner() {
   if (!confirm('¿Estás seguro de quitar el modo kiosko? El dispositivo dejará de estar administrado.')) return;
   log('Quitando modo kiosko...');
   try {
-    // Usar broadcast a la app para quitar Device Owner (funciona en Samsung y otros dispositivos)
-    const broadcastCmd = 'am broadcast -a ' + CONFIG.packageName + '.CLEAR_DEVICE_OWNER -n ' + CONFIG.packageName + '/.receivers.ClearDeviceOwnerReceiver 2>&1';
-    log('Procesando...');
-    await sh(broadcastCmd);
+    log('Removiendo admin activo...');
+    await sh('dpm remove-active-admin ' + CONFIG.adminReceiver + ' 2>&1');
+    log('Limpiando device owner...');
+    await sh('dpm clear-device-owner 2>&1');
 
-    // Esperar un momento para que la app procese el broadcast
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Verificar si se quitó correctamente
     await getAppStatus();
 
-    // Revisar si sigue siendo Device Owner
     const o = await sh('dumpsys device_policy');
     const stillOwner = o.includes('Device Owner') && o.includes('package=' + CONFIG.packageName);
 
@@ -246,8 +241,8 @@ async function removeDeviceOwner() {
       log('Modo kiosko quitado correctamente', 'success');
       notify('Modo kiosko quitado correctamente.', 'success');
     } else {
-      log('No se pudo quitar el modo kiosko. Verifica la version de la app.', 'warning');
-      notify('No se pudo quitar el modo kiosko. Asegurate de tener la app actualizada.', 'warning');
+      log('No se pudo quitar el modo kiosko.', 'warning');
+      notify('No se pudo quitar el modo kiosko.', 'warning');
     }
   } catch (e: any) {
     log('Error al procesar la solicitud', 'error');
