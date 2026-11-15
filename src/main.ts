@@ -281,8 +281,9 @@ elements.btnReboot.addEventListener('click', reboot);
 elements.btnClearLog.addEventListener('click', () => { elements.logContainer.innerHTML = ''; });
 elements.notificationClose.addEventListener('click', hideNotification);
 (navigator as any).usb?.addEventListener('disconnect', (e: any) => { if (device?.raw === e.device) { log('USB desconectado', 'warning'); handleDisconnect(); } });
-// Configurar URL de descarga
+// Configurar URL de descarga (botón del encabezado y el de la sección Instalación)
 elements.btnDownloadApk.href = CONFIG.downloadUrl;
+(getEl('btn-download-apk-top') as HTMLAnchorElement).href = CONFIG.downloadUrl;
 
 // Modal de ayuda USB
 const modalUsbHelp = getEl('modal-usb-help');

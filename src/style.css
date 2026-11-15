@@ -50,6 +50,20 @@ header .subtitle {
   font-size: 0.95rem;
 }
 
+/* Descarga del APK en el encabezado: disponible sin conectar dispositivo */
+header .header-download {
+  display: inline-block;
+  margin-top: 14px;
+  background: white;
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+header .header-download:hover {
+  background: #e8e8f0;
+}
+
 .card {
   background: var(--card-bg);
   border-radius: 8px;
